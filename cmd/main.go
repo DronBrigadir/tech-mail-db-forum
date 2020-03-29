@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/dronbrigadir/tech-mail-db-forum/pkg/server"
+	"github.com/dronbrigadir/tech-mail-db-forum/internal/server"
 	"log"
 )
 

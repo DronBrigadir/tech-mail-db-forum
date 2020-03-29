@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/dronbrigadir/tech-mail-db-forum/pkg/service"
+	"github.com/dronbrigadir/tech-mail-db-forum/internal/controllers"
 	"github.com/gorilla/mux"
 	"net/http"
 )
@@ -19,7 +19,8 @@ func NewServer(port string) *Server {
 }
 
 func (s *Server) InitRoutes() {
-	s.router.PathPrefix("/").Handler(service.SwaggerUI())
+	s.router.PathPrefix("/swaggerui/").Handler(controllers.SwaggerUI())
+	s.router.HandleFunc("/api/swagger.yml", controllers.SwaggerApi).Methods(http.MethodGet)
 }
 
 func (s *Server) Run() error {
