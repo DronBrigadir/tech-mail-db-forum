@@ -138,17 +138,22 @@ func GetForumThreads(w http.ResponseWriter, r *http.Request) {
 		order = "DESC"
 	}
 
-	if since == "" {
-		since = "0001-01-01 02:30:17+02:30:17"
+	comparison := ""
+	if since != "" {
+		if desc {
+			comparison = fmt.Sprintf("AND created <= '%s'::timestamptz", since)
+		} else {
+			comparison = fmt.Sprintf("AND created >= '%s'::timestamptz", since)
+		}
 	}
 
 	sqlQuery := fmt.Sprintf(
 		"SELECT id, title, author, forum, message, votes, coalesce(slug, ''), created "+
 			"FROM Thread "+
-			"WHERE forum = $1 AND created >= '%s'::timestamptz "+
+			"WHERE forum = $1 %s "+
 			"ORDER BY created %s "+
 			"LIMIT $2",
-		since,
+		comparison,
 		order,
 	)
 
