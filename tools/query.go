@@ -121,6 +121,12 @@ func IsPostExists(db database.TxOrDb, postId int) bool {
 	return err == nil
 }
 
+func IsParentPost(db database.TxOrDb, parentId, threadID int) bool {
+	var tmp string
+	err := db.QueryRow("SELECT author FROM Post WHERE id = $1 AND thread = $2", parentId, threadID).Scan(&tmp)
+	return err == nil
+}
+
 func GetPostByID(db database.TxOrDb, id int) (models.Post, error) {
 	post := models.Post{}
 	err := db.QueryRow(

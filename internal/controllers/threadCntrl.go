@@ -60,7 +60,7 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// checking for the post's existence
-		if !tools.IsPostExists(tx, int(post.Parent)) && post.Parent != 0 {
+		if !tools.IsParentPost(tx, int(post.Parent), int(thread.ID)) && post.Parent != 0 {
 			e := models.Error{Message: fmt.Sprintf("There is no parent post withd id '%d'", post.Parent)}
 			tools.ObjectResponce(w, http.StatusConflict, e)
 			return
