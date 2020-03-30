@@ -22,14 +22,15 @@ func ForumCreate(w http.ResponseWriter, r *http.Request) {
 	db := database.Connection
 
 	// checking for the user's existence
-	if !tools.IsUserExists(db, forum.User) {
+	user, err := tools.GetUserByNickname(db, forum.User)
+	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("User '%s' not found", forum.User)}
 		tools.ObjectResponce(w, http.StatusNotFound, e)
 		return
 	}
 
 	// checking for the forum's existence
-	if _, err := db.Exec("INSERT INTO Forum (title, forumUser, slug) VALUES ($1, $2, $3)", forum.Title, forum.User, forum.Slug); err != nil {
+	if _, err := db.Exec("INSERT INTO Forum (title, forumUser, slug) VALUES ($1, $2, $3)", forum.Title, user.Nickname, forum.Slug); err != nil {
 		existingForum, _ := tools.GetForumBySlug(db, forum.Slug)
 
 		tools.ObjectResponce(w, http.StatusConflict, existingForum)
