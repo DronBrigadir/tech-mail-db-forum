@@ -93,7 +93,7 @@ func CreateForumThread(w http.ResponseWriter, r *http.Request) {
 	var insertedID int
 	if err := db.QueryRow(
 		`INSERT INTO Thread (title, author, forum, message, slug, created)
- 			  VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+ 			  VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6) RETURNING id`,
 		thread.Title,
 		thread.Author,
 		thread.Forum,

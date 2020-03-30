@@ -90,7 +90,7 @@ func GetThreadBySlug(db database.TxOrDb, slug string) (models.Thread, error) {
 func GetThreadByID(db database.TxOrDb, id int) (models.Thread, error) {
 	thread := models.Thread{}
 	err := db.QueryRow(
-		"SELECT id, title, author, forum, message, votes, slug, created FROM Thread WHERE id = $1",
+		"SELECT id, title, author, forum, message, coalesce(votes, 0), coalesce(slug, ''), created FROM Thread WHERE id = $1",
 		id,
 	).Scan(
 		&thread.ID,
