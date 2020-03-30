@@ -73,14 +73,16 @@ func CreateForumThread(w http.ResponseWriter, r *http.Request) {
 	db := database.Connection
 
 	// checking for the user's existence
-	if !tools.IsUserExists(db, thread.Author) {
+	user, err := tools.GetUserByNickname(db, thread.Author)
+	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("User '%s' not found", thread.Author)}
 		tools.ObjectResponce(w, http.StatusNotFound, e)
 		return
 	}
 
 	// checking for the forum's existence
-	if !tools.IsForumExists(db, forumSlug) {
+	forum, err := tools.GetForumBySlug(db, forumSlug)
+	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("Forum with slug '%s' not found", forumSlug)}
 		tools.ObjectResponce(w, http.StatusNotFound, e)
 		return
@@ -95,8 +97,8 @@ func CreateForumThread(w http.ResponseWriter, r *http.Request) {
 		`INSERT INTO Thread (title, author, forum, message, slug, created)
  			  VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6) RETURNING id`,
 		thread.Title,
-		thread.Author,
-		thread.Forum,
+		user.Nickname,
+		forum.Slug,
 		thread.Message,
 		thread.Slug,
 		thread.Created).Scan(&insertedID); err != nil {
@@ -209,7 +211,11 @@ func GetForumUsers(w http.ResponseWriter, r *http.Request) {
 
 	sinceStr := ""
 	if since != "" {
-		sinceStr = fmt.Sprintf("and u.nickname > '%s'", since)
+		comparisonSign := ">"
+		if desc {
+			comparisonSign = "<"
+		}
+		sinceStr = fmt.Sprintf("AND f.nickname %s '%s'", comparisonSign, since)
 	}
 
 	sqlQuery := fmt.Sprintf(
@@ -217,7 +223,7 @@ func GetForumUsers(w http.ResponseWriter, r *http.Request) {
 			"FROM ForumUser AS f "+
 			"JOIN Users as u ON u.nickname = f.nickname "+
 			"WHERE f.slug = $1 %s "+
-			"ORDER BY u.nickname %s "+
+			"ORDER BY f.nickname %s "+
 			"LIMIT $2",
 		sinceStr,
 		order,

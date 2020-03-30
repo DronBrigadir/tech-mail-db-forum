@@ -186,7 +186,7 @@ EXECUTE PROCEDURE updatethreadvotes();
 CREATE TABLE ForumUser
 (
     slug     CITEXT,
-    nickname CITEXT,
+    nickname CITEXT COLLATE "POSIX",
     CONSTRAINT unique_slug_nickname UNIQUE (slug, nickname)
 );
 
