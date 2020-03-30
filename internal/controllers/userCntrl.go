@@ -30,9 +30,9 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 		user.About,
 		user.Email,
 	); err != nil {
-		existingUser, _ := tools.GetUserByNickname(db, nickname)
+		existingUsers, _ := tools.GetUsersByEmailOrNickname(db, user.Email, nickname)
 
-		tools.ObjectResponce(w, http.StatusConflict, existingUser)
+		tools.ObjectResponce(w, http.StatusConflict, existingUsers)
 		return
 	}
 

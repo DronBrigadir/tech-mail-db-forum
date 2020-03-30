@@ -22,6 +22,24 @@ func GetUserByNickname(db database.TxOrDb, nickname string) (models.User, error)
 	return user, err
 }
 
+func GetUsersByEmailOrNickname(db database.TxOrDb, email, nickname string) (models.Users, error) {
+	rows, err := db.Query(
+		"SELECT nickname, fullname, about, email FROM Users WHERE email = $1 OR nickname = $2",
+		email,
+		nickname,
+	)
+	defer rows.Close()
+
+	users := models.Users{}
+	for rows.Next() {
+		user := models.User{}
+		_ = rows.Scan(&user.Nickname, &user.Fullname, &user.About, &user.Email)
+		users = append(users, user)
+	}
+
+	return users, err
+}
+
 func IsUserExists(db database.TxOrDb, nickname string) bool {
 	var tmp string
 	err := db.QueryRow("SELECT nickname FROM Users WHERE nickname = $1", nickname).Scan(&tmp)
