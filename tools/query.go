@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/database"
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/models"
+	"log"
 	"strconv"
 )
 
@@ -124,6 +125,7 @@ func IsPostExists(db database.TxOrDb, postId int) bool {
 func IsParentPost(db database.TxOrDb, parentId, threadID int) bool {
 	var tmp string
 	err := db.QueryRow("SELECT author FROM Post WHERE id = $1 AND thread = $2", parentId, threadID).Scan(&tmp)
+	log.Println("IsParent post: ", err)
 	return err == nil
 }
 
