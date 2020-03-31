@@ -130,7 +130,7 @@ func IsParentPost(db database.TxOrDb, parentId, threadID int) bool {
 func GetPostByID(db database.TxOrDb, id int) (models.Post, error) {
 	post := models.Post{}
 	err := db.QueryRow(
-		"SELECT id, parent, author, message, isedited, forum, thread, created FROM Post WHERE id = $1",
+		"SELECT id, coalesce(parent, 0), author, message, isedited, forum, thread, created FROM Post WHERE id = $1",
 		id,
 	).Scan(
 		&post.ID,

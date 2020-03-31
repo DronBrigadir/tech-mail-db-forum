@@ -53,7 +53,8 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// checking for the user's existence
-		if !tools.IsUserExists(tx, post.Author) {
+		user, err := tools.GetUserByNickname(tx, post.Author)
+		if err != nil {
 			e := models.Error{Message: fmt.Sprintf("User with nickname '%s' not found", post.Author)}
 			tools.ObjectResponce(w, http.StatusNotFound, e)
 			return
@@ -68,8 +69,8 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 
 		post.Created = timeNow
 
-		querySql.WriteString(fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)", (index*6)+1, (index*6)+2, (index*6)+3, (index*6)+4, (index*6)+5, (index*6)+6))
-		vals = append(vals, post.Parent, post.Author, post.Message, thread.Forum, thread.ID, post.Created)
+		querySql.WriteString(fmt.Sprintf("(NULLIF($%d, 0), $%d, $%d, $%d, $%d, $%d)", (index*6)+1, (index*6)+2, (index*6)+3, (index*6)+4, (index*6)+5, (index*6)+6))
+		vals = append(vals, post.Parent, user.Nickname, post.Message, thread.Forum, thread.ID, post.Created)
 	}
 
 	postsCreated := models.Posts{}
@@ -79,7 +80,7 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	querySql.WriteString(" RETURNING id, parent, author, message, isedited, forum, thread, created;")
+	querySql.WriteString(" RETURNING id, coalesce(parent, 0), author, message, isedited, forum, thread, created;")
 
 	rows, err := tx.Query(querySql.String(), vals...)
 	if err != nil {
@@ -98,6 +99,7 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 	err = tx.Commit()
 	if err != nil {
 		log.Println(err)
+		return
 	}
 
 	tools.ObjectResponce(w, http.StatusCreated, postsCreated)
