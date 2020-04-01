@@ -16,6 +16,8 @@ CREATE TABLE Users (
     email CITEXT UNIQUE NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_user_nickname ON Users(nickname);
+
 ---------------------------------------------------------------------------
 
 CREATE TABLE Forum (
@@ -27,6 +29,7 @@ CREATE TABLE Forum (
 );
 
 CREATE INDEX IF NOT EXISTS idx_forum_user ON Forum(forumUser);
+CREATE INDEX IF NOT EXISTS idx_forum_slug ON Forum(slug);
 
 ---------------------------------------------------------------------------
 
@@ -43,6 +46,7 @@ CREATE TABLE Thread (
 
 CREATE INDEX IF NOT EXISTS idx_thread_author ON Thread(author);
 CREATE INDEX IF NOT EXISTS idx_thread_forum ON Thread(forum);
+CREATE INDEX IF NOT EXISTS idx_thread_slug ON Thread(slug);
 
 CREATE OR REPLACE FUNCTION updatethreadcount() RETURNS TRIGGER AS
 $body$
@@ -93,6 +97,11 @@ CREATE TABLE Post (
 CREATE INDEX IF NOT EXISTS idx_post_author ON Post(author);
 CREATE INDEX IF NOT EXISTS idx_post_forum ON Post(forum);
 CREATE INDEX IF NOT EXISTS idx_post_thread ON Post(thread);
+CREATE INDEX IF NOT EXISTS idx_post_thread_id ON Post (thread, id);
+CREATE INDEX IF NOT EXISTS idx_post_thread ON Post (thread);
+CREATE INDEX IF NOT EXISTS idx_post_thread_path_id ON Post (thread, path, id);
+CREATE INDEX IF NOT EXISTS idx_post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
+
 
 CREATE TRIGGER insert_forum_user_trigger_post
     AFTER INSERT
