@@ -17,6 +17,7 @@ CREATE TABLE Users (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_nickname ON Users(nickname);
+CREATE INDEX IF NOT EXISTS idx_user_full ON Users(nickname, fullname, about, email);
 
 ---------------------------------------------------------------------------
 
@@ -30,23 +31,25 @@ CREATE TABLE Forum (
 
 CREATE INDEX IF NOT EXISTS idx_forum_user ON Forum(forumUser);
 CREATE INDEX IF NOT EXISTS idx_forum_slug ON Forum(slug);
+CREATE INDEX IF NOT EXISTS idx_forum_full ON Forum(slug, title, forumUser, posts, threads);
 
 ---------------------------------------------------------------------------
 
 CREATE TABLE Thread (
-                        id BIGSERIAL PRIMARY KEY,
-                        title VARCHAR(255) NOT NULL,
-                        author CITEXT REFERENCES Users(nickname) NOT NULL,
-                        forum CITEXT REFERENCES Forum(slug) NOT NULL,
-                        message TEXT NOT NULL,
-                        votes BIGINT default 0,
-                        slug CITEXT UNIQUE,
-                        created TIMESTAMP WITH TIME ZONE DEFAULT now()
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    author CITEXT REFERENCES Users(nickname) NOT NULL,
+    forum CITEXT REFERENCES Forum(slug) NOT NULL,
+    message TEXT NOT NULL,
+    votes BIGINT default 0,
+    slug CITEXT UNIQUE,
+    created TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_thread_author ON Thread(author);
 CREATE INDEX IF NOT EXISTS idx_thread_forum ON Thread(forum);
 CREATE INDEX IF NOT EXISTS idx_thread_slug ON Thread(slug);
+CREATE INDEX IF NOT EXISTS idx_thread_full ON Thread(slug, id, title, author, forum, message, votes, created);
 
 CREATE OR REPLACE FUNCTION updatethreadcount() RETURNS TRIGGER AS
 $body$
@@ -101,7 +104,9 @@ CREATE INDEX IF NOT EXISTS idx_post_thread_id ON Post (thread, id);
 CREATE INDEX IF NOT EXISTS idx_post_thread ON Post (thread);
 CREATE INDEX IF NOT EXISTS idx_post_thread_path_id ON Post (thread, path, id);
 CREATE INDEX IF NOT EXISTS idx_post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
-
+CREATE INDEX IF NOT EXISTS idx_post_id_author ON Post(id, author);
+CREATE INDEX IF NOT EXISTS idx_post_id_thread_author ON Post(id, thread, author);
+CREATE INDEX IF NOT EXISTS idx_post_full ON Post(id, coalesce(parent, 0), author, message, isedited, forum, thread, created);
 
 CREATE TRIGGER insert_forum_user_trigger_post
     AFTER INSERT
@@ -199,5 +204,4 @@ CREATE TABLE ForumUser
     CONSTRAINT unique_slug_nickname UNIQUE (slug, nickname)
 );
 
-CREATE INDEX IF NOT EXISTS idx_forumUser_slug on ForumUser (slug);
-CREATE INDEX IF NOT EXISTS idx_forumUser_nickname on ForumUser (nickname);
+CREATE INDEX IF NOT EXISTS idx_forumUser_slug_nickname on ForumUser (slug, nickname);
