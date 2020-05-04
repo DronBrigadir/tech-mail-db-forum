@@ -89,7 +89,6 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		nickname,
 	)
 	if err != nil {
-		log.Println(err)
 		e := models.Error{Message: fmt.Sprintf("User with email '%s' already exists", newUser.Email)}
 		tools.ObjectResponce(w, http.StatusConflict, e)
 		return

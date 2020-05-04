@@ -30,7 +30,6 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 
 	thread, err := tools.GetThreadBySlugOrID(tx, slugOrId)
 	if err != nil {
-		log.Println(err)
 		e := models.Error{Message: fmt.Sprintf("Thread with slug_or_id '%s' not found", slugOrId)}
 		tools.ObjectResponce(w, http.StatusNotFound, e)
 		return
@@ -55,14 +54,13 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 		// checking for the user's existence
 		user, err := tools.GetUserByNickname(tx, post.Author)
 		if err != nil {
-			log.Println(err)
 			e := models.Error{Message: fmt.Sprintf("User with nickname '%s' not found", post.Author)}
 			tools.ObjectResponce(w, http.StatusNotFound, e)
 			return
 		}
 
 		// checking for the post's existence
-		if !tools.IsParentPost(tx, int(post.Parent), int(thread.ID)) && post.Parent != 0 {
+		if res := tools.IsPostExists(tx, int(post.Parent), int(thread.ID)); post.Parent != 0 && !res {
 			e := models.Error{Message: fmt.Sprintf("There is no parent post withd id '%d'", post.Parent)}
 			tools.ObjectResponce(w, http.StatusConflict, e)
 			return
@@ -99,7 +97,7 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 
 	err = tx.Commit()
 	if err != nil {
-		log.Println(err)
+		log.Println("After commit post create", err)
 		return
 	}
 
@@ -115,7 +113,6 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 
 	thread, err := tools.GetThreadBySlugOrID(db, slugOrId)
 	if err != nil {
-		log.Println(err)
 		e := models.Error{Message: fmt.Sprintf("Thread with slug_or_id '%s' not found", slugOrId)}
 		tools.ObjectResponce(w, http.StatusNotFound, e)
 		return

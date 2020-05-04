@@ -21,7 +21,6 @@ func GetPostDetails(w http.ResponseWriter, r *http.Request) {
 
 	post, err := tools.GetPostByID(db, id)
 	if err != nil {
-		log.Println(err)
 		e := models.Error{Message: fmt.Sprintf("Post with id '%d' not found", id)}
 		tools.ObjectResponce(w, http.StatusNotFound, e)
 		return

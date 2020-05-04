@@ -115,16 +115,13 @@ func GetThreadBySlugOrID(db database.TxOrDb, slugOrId string) (models.Thread, er
 	return GetThreadByID(db, id)
 }
 
-func IsPostExists(db database.TxOrDb, postId int) bool {
-	var tmp string
-	err := db.QueryRow("SELECT author FROM Post WHERE id = $1", postId).Scan(&tmp)
-	return err == nil
-}
+func IsPostExists(db database.TxOrDb, postId, threadID int) bool {
+	var id int
+	if err := db.QueryRow("SELECT id FROM Post WHERE id = $1 AND thread = $2", postId, threadID).Scan(&id); err != nil {
+		return false
+	}
 
-func IsParentPost(db database.TxOrDb, parentId, threadID int) bool {
-	var tmp string
-	err := db.QueryRow("SELECT author FROM Post WHERE id = $1 AND thread = $2", parentId, threadID).Scan(&tmp)
-	return err == nil
+	return id == postId
 }
 
 func GetPostByID(db database.TxOrDb, id int) (models.Post, error) {
