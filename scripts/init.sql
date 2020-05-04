@@ -17,6 +17,7 @@ CREATE TABLE Users (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_nickname ON Users(nickname);
+CREATE INDEX IF NOT EXISTS idx_user_email ON Users(email);
 CREATE INDEX IF NOT EXISTS idx_user_full ON Users(nickname, fullname, about, email);
 
 ---------------------------------------------------------------------------
@@ -97,14 +98,13 @@ CREATE TABLE Post (
     path     BIGINT[] NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_post_author ON Post(author);
+-- CREATE INDEX IF NOT EXISTS idx_post_author ON Post(author);
 CREATE INDEX IF NOT EXISTS idx_post_forum ON Post(forum);
-CREATE INDEX IF NOT EXISTS idx_post_thread ON Post(thread);
-CREATE INDEX IF NOT EXISTS idx_post_thread_id ON Post (thread, id);
-CREATE INDEX IF NOT EXISTS idx_post_thread ON Post (thread);
+-- CREATE INDEX IF NOT EXISTS idx_post_thread_id ON Post (thread, id);
+-- CREATE INDEX IF NOT EXISTS idx_post_thread ON Post (thread);
 CREATE INDEX IF NOT EXISTS idx_post_thread_path_id ON Post (thread, path, id);
 CREATE INDEX IF NOT EXISTS idx_post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
-CREATE INDEX IF NOT EXISTS idx_post_id_author ON Post(id, author);
+-- CREATE INDEX IF NOT EXISTS idx_post_id_author ON Post(id, author);
 CREATE INDEX IF NOT EXISTS idx_post_id_thread_author ON Post(id, thread, author);
 CREATE INDEX IF NOT EXISTS idx_post_full ON Post(id, coalesce(parent, 0), author, message, isedited, forum, thread, created);
 
