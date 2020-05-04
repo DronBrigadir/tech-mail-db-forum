@@ -17,6 +17,7 @@ CREATE TABLE Users (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_nickname ON Users(nickname);
+CREATE INDEX IF NOT EXISTS idx_user_full ON Users(nickname, fullname, about, email);
 
 ---------------------------------------------------------------------------
 
@@ -199,5 +200,4 @@ CREATE TABLE ForumUser
     CONSTRAINT unique_slug_nickname UNIQUE (slug, nickname)
 );
 
-CREATE INDEX IF NOT EXISTS idx_forumUser_slug on ForumUser (slug);
-CREATE INDEX IF NOT EXISTS idx_forumUser_nickname on ForumUser (nickname);
+CREATE INDEX IF NOT EXISTS idx_forumUser_slug on ForumUser (slug, nickname);
