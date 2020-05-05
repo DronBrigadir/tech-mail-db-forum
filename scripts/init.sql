@@ -101,6 +101,8 @@ CREATE INDEX IF NOT EXISTS idx_post_thread ON Post(thread);
 CREATE INDEX IF NOT EXISTS idx_post_path_parent ON Post((path[1]));
 CREATE INDEX IF NOT EXISTS idx_post_thread_path_parent ON Post(thread, (path[1]));
 CREATE INDEX IF NOT EXISTS idx_post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
+CREATE INDEX IF NOT EXISTS post_thread_path_id ON Post (thread, path, id);
+CREATE INDEX IF NOT EXISTS post_path ON Post (path);
 
 CREATE OR REPLACE FUNCTION createpath() RETURNS TRIGGER AS
 $postmatpath$
