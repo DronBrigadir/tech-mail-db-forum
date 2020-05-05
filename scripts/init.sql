@@ -98,6 +98,8 @@ CREATE TABLE Post (
 CREATE INDEX IF NOT EXISTS idx_post_author ON Post(author);
 CREATE INDEX IF NOT EXISTS idx_post_forum ON Post(forum);
 CREATE INDEX IF NOT EXISTS idx_post_thread ON Post(thread);
+CREATE INDEX IF NOT EXISTS idx_post_path_parent ON Post((path[1]));
+CREATE INDEX IF NOT EXISTS idx_post_thread_path_parent ON Post(thread, (path[1]));
 CREATE INDEX IF NOT EXISTS idx_post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
 
 CREATE OR REPLACE FUNCTION createpath() RETURNS TRIGGER AS
