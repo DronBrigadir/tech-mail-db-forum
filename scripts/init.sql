@@ -98,33 +98,7 @@ CREATE TABLE Post (
 CREATE INDEX IF NOT EXISTS idx_post_author ON Post(author);
 CREATE INDEX IF NOT EXISTS idx_post_forum ON Post(forum);
 CREATE INDEX IF NOT EXISTS idx_post_thread ON Post(thread);
-CREATE INDEX IF NOT EXISTS idx_post_thread_id ON Post (thread, id);
-CREATE INDEX IF NOT EXISTS idx_post_thread ON Post (thread);
-CREATE INDEX IF NOT EXISTS idx_post_thread_path_id ON Post (thread, path, id);
 CREATE INDEX IF NOT EXISTS idx_post_thread_id_path_parent ON Post (thread, id, (path[1]), parent);
-
-
-CREATE TRIGGER insert_forum_user_trigger_post
-    AFTER INSERT
-    ON Post
-    FOR EACH ROW
-EXECUTE PROCEDURE insertforumuser();
-
-CREATE OR REPLACE FUNCTION updatepostcount() RETURNS TRIGGER AS
-$body$
-BEGIN
-    UPDATE Forum
-    SET posts = posts + 1
-    WHERE slug = NEW.forum;
-    RETURN NEW;
-END;
-$body$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_post_count_trigger
-    AFTER INSERT
-    ON Post
-    FOR EACH ROW
-EXECUTE PROCEDURE updatepostcount();
 
 CREATE OR REPLACE FUNCTION createpath() RETURNS TRIGGER AS
 $postmatpath$
@@ -200,4 +174,4 @@ CREATE TABLE ForumUser
     CONSTRAINT unique_slug_nickname UNIQUE (slug, nickname)
 );
 
-CREATE INDEX IF NOT EXISTS idx_forumUser_slug on ForumUser (slug, nickname);
+CREATE INDEX IF NOT EXISTS idx_forumUser_full on ForumUser (slug, nickname);

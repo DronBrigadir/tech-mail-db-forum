@@ -20,7 +20,7 @@ func CreateThreadPost(ctx *fasthttp.RequestCtx) {
 
 	tx, err := db.Begin()
 	if err != nil {
-		log.Println(err)
+		log.Println("Can't begin transaction: ", err)
 		return
 	}
 
@@ -56,7 +56,7 @@ func CreateThreadPost(ctx *fasthttp.RequestCtx) {
 			return
 		}
 
-		// checking for the post's existence
+		// checking for the parent post existence
 		if res := tools.IsPostExists(tx, int(post.Parent), int(thread.ID)); post.Parent != 0 && !res {
 			e := models.Error{Message: fmt.Sprintf("There is no parent post withd id '%d'", post.Parent)}
 			tools.ObjectResponce(ctx, http.StatusConflict, e)
@@ -92,9 +92,38 @@ func CreateThreadPost(ctx *fasthttp.RequestCtx) {
 
 	rows.Close()
 
+	if len(postsCreated) > 0 {
+		_, err = tx.Exec(`
+		UPDATE forum
+		SET posts = posts + $1
+		WHERE slug = $2;`,
+			len(postsCreated),
+			postsCreated[0].Forum,
+		)
+		if err != nil {
+			log.Println("Can't increase forum posts: ", err)
+		}
+	}
+
+	vals = []interface{}{}
+	querySql.Reset()
+	querySql.WriteString("INSERT INTO ForumUser(slug, nickname) VALUES ")
+	for i, post := range postsCreated {
+		if i != 0 {
+			querySql.WriteString(",")
+		}
+		querySql.WriteString(fmt.Sprintf("($%d, $%d)", (i*2)+1, (i*2)+2))
+		vals = append(vals, post.Forum, post.Author)
+	}
+	querySql.WriteString(" ON CONFLICT DO NOTHING")
+	_, err = tx.Exec(querySql.String(), vals...)
+	if err != nil {
+		log.Println("Can't insert into forumUser: ", err)
+	}
+
 	err = tx.Commit()
 	if err != nil {
-		log.Println("After commit post create", err)
+		log.Println("After commit post create: ", err)
 		return
 	}
 
