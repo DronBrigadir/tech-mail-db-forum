@@ -4,11 +4,12 @@ import (
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/database"
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/models"
 	"github.com/dronbrigadir/tech-mail-db-forum/tools"
+	"github.com/valyala/fasthttp"
 	"log"
 	"net/http"
 )
 
-func ClearDB(w http.ResponseWriter, r *http.Request) {
+func ClearDB(ctx *fasthttp.RequestCtx) {
 	db := database.Connection
 
 	_, _ = db.Exec("TRUNCATE TABLE Forum, ForumUser, Post, Thread, Users, Vote CASCADE")
@@ -16,7 +17,7 @@ func ClearDB(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func StatusDB(w http.ResponseWriter, r *http.Request) {
+func StatusDB(ctx *fasthttp.RequestCtx) {
 	db := database.Connection
 
 	status := models.Status{}
@@ -33,6 +34,6 @@ func StatusDB(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tools.ObjectResponce(w, http.StatusOK, status)
+	tools.ObjectResponce(ctx, http.StatusOK, status)
 	return
 }

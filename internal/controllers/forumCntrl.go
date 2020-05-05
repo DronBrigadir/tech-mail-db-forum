@@ -5,18 +5,16 @@ import (
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/database"
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/models"
 	"github.com/dronbrigadir/tech-mail-db-forum/tools"
-	"github.com/gorilla/mux"
-	"io/ioutil"
+	"github.com/valyala/fasthttp"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-func ForumCreate(w http.ResponseWriter, r *http.Request) {
+func ForumCreate(ctx *fasthttp.RequestCtx) {
 	forum := models.Forum{}
-	body, _ := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+	body := ctx.Request.Body()
 	_ = forum.UnmarshalJSON(body)
 
 	db := database.Connection
@@ -25,7 +23,7 @@ func ForumCreate(w http.ResponseWriter, r *http.Request) {
 	user, err := tools.GetUserByNickname(db, forum.User)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("User '%s' not found", forum.User)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
@@ -33,40 +31,37 @@ func ForumCreate(w http.ResponseWriter, r *http.Request) {
 	if _, err := db.Exec("INSERT INTO Forum (title, forumUser, slug) VALUES ($1, $2, $3)", forum.Title, user.Nickname, forum.Slug); err != nil {
 		existingForum, _ := tools.GetForumBySlug(db, forum.Slug)
 
-		tools.ObjectResponce(w, http.StatusConflict, existingForum)
+		tools.ObjectResponce(ctx, http.StatusConflict, existingForum)
 		return
 	}
 
 	newForum, _ := tools.GetForumBySlug(db, forum.Slug)
 
-	tools.ObjectResponce(w, http.StatusCreated, newForum)
+	tools.ObjectResponce(ctx, http.StatusCreated, newForum)
 	return
 }
 
-func ForumGet(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	slug := vars["slug"]
+func ForumGet(ctx *fasthttp.RequestCtx) {
+	slug := fmt.Sprintf("%v", ctx.UserValue("slug"))
 
 	db := database.Connection
 
 	forum, err := tools.GetForumBySlug(db, slug)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("Forum with slug '%s' not found", slug)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
-	tools.ObjectResponce(w, http.StatusOK, forum)
+	tools.ObjectResponce(ctx, http.StatusOK, forum)
 	return
 }
 
-func CreateForumThread(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	forumSlug := vars["slug"]
+func CreateForumThread(ctx *fasthttp.RequestCtx) {
+	forumSlug := fmt.Sprintf("%v", ctx.UserValue("slug"))
 
 	thread := models.Thread{}
-	body, _ := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+	body := ctx.Request.Body()
 	_ = thread.UnmarshalJSON(body)
 	thread.Forum = forumSlug
 
@@ -76,7 +71,7 @@ func CreateForumThread(w http.ResponseWriter, r *http.Request) {
 	user, err := tools.GetUserByNickname(db, thread.Author)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("User '%s' not found", thread.Author)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
@@ -84,7 +79,7 @@ func CreateForumThread(w http.ResponseWriter, r *http.Request) {
 	forum, err := tools.GetForumBySlug(db, forumSlug)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("Forum with slug '%s' not found", forumSlug)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
@@ -104,32 +99,30 @@ func CreateForumThread(w http.ResponseWriter, r *http.Request) {
 		thread.Created).Scan(&insertedID); err != nil {
 		existingThread, _ := tools.GetThreadBySlug(db, thread.Slug)
 
-		tools.ObjectResponce(w, http.StatusConflict, existingThread)
+		tools.ObjectResponce(ctx, http.StatusConflict, existingThread)
 		return
 	}
 
 	newThread, _ := tools.GetThreadByID(db, insertedID)
 
-	tools.ObjectResponce(w, http.StatusCreated, newThread)
+	tools.ObjectResponce(ctx, http.StatusCreated, newThread)
 	return
 }
 
-func GetForumThreads(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	forumSlug := vars["slug"]
+func GetForumThreads(ctx *fasthttp.RequestCtx) {
+	forumSlug := fmt.Sprintf("%v", ctx.UserValue("slug"))
 
 	db := database.Connection
 
 	if !tools.IsForumExists(db, forumSlug) {
 		e := models.Error{Message: fmt.Sprintf("Forum with slug '%s' not found", forumSlug)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
-	query := r.URL.Query()
-	limit, _ := strconv.Atoi(query.Get("limit"))
-	since := query.Get("since")
-	desc, _ := strconv.ParseBool(query.Get("desc"))
+	limit := ctx.QueryArgs().GetUintOrZero("limit")
+	since := string(ctx.QueryArgs().Peek("since"))
+	desc := ctx.QueryArgs().GetBool("desc")
 
 	if limit == 0 {
 		limit = 100
@@ -179,26 +172,24 @@ func GetForumThreads(w http.ResponseWriter, r *http.Request) {
 		threads = append(threads, thread)
 	}
 
-	tools.ObjectResponce(w, http.StatusOK, threads)
+	tools.ObjectResponce(ctx, http.StatusOK, threads)
 	return
 }
 
-func GetForumUsers(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	forumSlug := vars["slug"]
+func GetForumUsers(ctx *fasthttp.RequestCtx) {
+	forumSlug := fmt.Sprintf("%v", ctx.UserValue("slug"))
 
 	db := database.Connection
 
 	if !tools.IsForumExists(db, forumSlug) {
 		e := models.Error{Message: fmt.Sprintf("Forum with slug '%s' not found", forumSlug)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
-	query := r.URL.Query()
-	limit, _ := strconv.Atoi(query.Get("limit"))
-	since := query.Get("since")
-	desc, _ := strconv.ParseBool(query.Get("desc"))
+	limit := ctx.QueryArgs().GetUintOrZero("limit")
+	since := string(ctx.QueryArgs().Peek("since"))
+	desc, _ := strconv.ParseBool(string(ctx.QueryArgs().Peek("desc")))
 
 	if limit == 0 {
 		limit = 100
@@ -249,6 +240,6 @@ func GetForumUsers(w http.ResponseWriter, r *http.Request) {
 		users = append(users, user)
 	}
 
-	tools.ObjectResponce(w, http.StatusOK, users)
+	tools.ObjectResponce(ctx, http.StatusOK, users)
 	return
 }

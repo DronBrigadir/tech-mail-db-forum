@@ -5,19 +5,16 @@ import (
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/database"
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/models"
 	"github.com/dronbrigadir/tech-mail-db-forum/tools"
-	"github.com/gorilla/mux"
-	"io/ioutil"
+	"github.com/valyala/fasthttp"
 	"log"
 	"net/http"
 )
 
-func UserCreate(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	nickname := vars["nickname"]
+func UserCreate(ctx *fasthttp.RequestCtx) {
+	nickname := fmt.Sprintf("%v", ctx.UserValue("nickname"))
 
 	user := models.User{}
-	body, _ := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+	body := ctx.Request.Body()
 	_ = user.UnmarshalJSON(body)
 	user.Nickname = nickname
 
@@ -32,49 +29,46 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 	); err != nil {
 		existingUsers, _ := tools.GetUsersByEmailOrNickname(db, user.Email, nickname)
 
-		tools.ObjectResponce(w, http.StatusConflict, existingUsers)
+		tools.ObjectResponce(ctx, http.StatusConflict, existingUsers)
 		return
 	}
 
 	newUser, _ := tools.GetUserByNickname(db, nickname)
 
-	tools.ObjectResponce(w, http.StatusCreated, newUser)
+	tools.ObjectResponce(ctx, http.StatusCreated, newUser)
 	return
 }
 
-func GetUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	nickname := vars["nickname"]
+func GetUser(ctx *fasthttp.RequestCtx) {
+	nickname := fmt.Sprintf("%v", ctx.UserValue("nickname"))
 
 	db := database.Connection
 
 	user, err := tools.GetUserByNickname(db, nickname)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("User with nickname '%s' not found", nickname)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
-	tools.ObjectResponce(w, http.StatusOK, user)
+	tools.ObjectResponce(ctx, http.StatusOK, user)
 	return
 }
 
-func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	nickname := vars["nickname"]
+func UpdateUser(ctx *fasthttp.RequestCtx) {
+	nickname := fmt.Sprintf("%v", ctx.UserValue("nickname"))
 
 	db := database.Connection
 
 	user, err := tools.GetUserByNickname(db, nickname)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("User with nickname '%s' not found", nickname)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
 	newUser := models.User{}
-	body, _ := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+	body := ctx.Request.Body()
 	_ = newUser.UnmarshalJSON(body)
 
 	_, err = db.Exec(
@@ -90,7 +84,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("User with email '%s' already exists", newUser.Email)}
-		tools.ObjectResponce(w, http.StatusConflict, e)
+		tools.ObjectResponce(ctx, http.StatusConflict, e)
 		return
 	}
 
@@ -100,6 +94,6 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tools.ObjectResponce(w, http.StatusOK, user)
+	tools.ObjectResponce(ctx, http.StatusOK, user)
 	return
 }

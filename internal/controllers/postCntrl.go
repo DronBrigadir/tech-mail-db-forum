@@ -5,29 +5,26 @@ import (
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/database"
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/models"
 	"github.com/dronbrigadir/tech-mail-db-forum/tools"
-	"github.com/gorilla/mux"
-	"io/ioutil"
+	"github.com/valyala/fasthttp"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-func GetPostDetails(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, _ := strconv.Atoi(vars["id"])
+func GetPostDetails(ctx *fasthttp.RequestCtx) {
+	id, _ := strconv.Atoi(ctx.UserValue("id").(string))
 
 	db := database.Connection
 
 	post, err := tools.GetPostByID(db, id)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("Post with id '%d' not found", id)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
-	query := r.URL.Query()
-	related := strings.Split(query.Get("related"), ",")
+	related := strings.Split(string(ctx.QueryArgs().Peek("related")), ",")
 
 	fullPost := models.PostFull{
 		Post: &post,
@@ -47,26 +44,24 @@ func GetPostDetails(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tools.ObjectResponce(w, http.StatusOK, fullPost)
+	tools.ObjectResponce(ctx, http.StatusOK, fullPost)
 	return
 }
 
-func UpdatePost(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, _ := strconv.Atoi(vars["id"])
+func UpdatePost(ctx *fasthttp.RequestCtx) {
+	id, _ := strconv.Atoi(ctx.UserValue("id").(string))
 
 	db := database.Connection
 
 	post, err := tools.GetPostByID(db, id)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("Post with id '%d' not found", id)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
 	newPost := models.Post{}
-	body, _ := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+	body := ctx.Request.Body()
 	_ = newPost.UnmarshalJSON(body)
 
 	if _, err := db.Exec(
@@ -81,6 +76,6 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	post, _ = tools.GetPostByID(db, id)
-	tools.ObjectResponce(w, http.StatusOK, post)
+	tools.ObjectResponce(ctx, http.StatusOK, post)
 	return
 }

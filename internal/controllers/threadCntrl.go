@@ -5,8 +5,7 @@ import (
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/database"
 	"github.com/dronbrigadir/tech-mail-db-forum/internal/models"
 	"github.com/dronbrigadir/tech-mail-db-forum/tools"
-	"github.com/gorilla/mux"
-	"io/ioutil"
+	"github.com/valyala/fasthttp"
 	"log"
 	"net/http"
 	"strconv"
@@ -14,9 +13,8 @@ import (
 	"time"
 )
 
-func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	slugOrId := vars["slug_or_id"]
+func CreateThreadPost(ctx *fasthttp.RequestCtx) {
+	slugOrId := fmt.Sprintf("%v", ctx.UserValue("slug_or_id"))
 
 	db := database.Connection
 
@@ -31,13 +29,12 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 	thread, err := tools.GetThreadBySlugOrID(tx, slugOrId)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("Thread with slug_or_id '%s' not found", slugOrId)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
 	posts := models.Posts{}
-	body, _ := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+	body := ctx.Request.Body()
 	_ = posts.UnmarshalJSON(body)
 
 	var querySql strings.Builder
@@ -55,14 +52,14 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 		user, err := tools.GetUserByNickname(tx, post.Author)
 		if err != nil {
 			e := models.Error{Message: fmt.Sprintf("User with nickname '%s' not found", post.Author)}
-			tools.ObjectResponce(w, http.StatusNotFound, e)
+			tools.ObjectResponce(ctx, http.StatusNotFound, e)
 			return
 		}
 
 		// checking for the post's existence
 		if res := tools.IsPostExists(tx, int(post.Parent), int(thread.ID)); post.Parent != 0 && !res {
 			e := models.Error{Message: fmt.Sprintf("There is no parent post withd id '%d'", post.Parent)}
-			tools.ObjectResponce(w, http.StatusConflict, e)
+			tools.ObjectResponce(ctx, http.StatusConflict, e)
 			return
 		}
 
@@ -75,7 +72,7 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 	postsCreated := models.Posts{}
 	if len(vals) == 0 {
 		_ = tx.Commit()
-		tools.ObjectResponce(w, http.StatusCreated, postsCreated)
+		tools.ObjectResponce(ctx, http.StatusCreated, postsCreated)
 		return
 	}
 
@@ -101,43 +98,40 @@ func CreateThreadPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tools.ObjectResponce(w, http.StatusCreated, postsCreated)
+	tools.ObjectResponce(ctx, http.StatusCreated, postsCreated)
 	return
 }
 
-func GetThread(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	slugOrId := vars["slug_or_id"]
+func GetThread(ctx *fasthttp.RequestCtx) {
+	slugOrId := fmt.Sprintf("%v", ctx.UserValue("slug_or_id"))
 
 	db := database.Connection
 
 	thread, err := tools.GetThreadBySlugOrID(db, slugOrId)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("Thread with slug_or_id '%s' not found", slugOrId)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
-	tools.ObjectResponce(w, http.StatusOK, thread)
+	tools.ObjectResponce(ctx, http.StatusOK, thread)
 	return
 }
 
-func UpdateThread(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	slugOrId := vars["slug_or_id"]
+func UpdateThread(ctx *fasthttp.RequestCtx) {
+	slugOrId := fmt.Sprintf("%v", ctx.UserValue("slug_or_id"))
 
 	db := database.Connection
 
 	thread, err := tools.GetThreadBySlugOrID(db, slugOrId)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("Thread with slug_or_id '%s' not found", slugOrId)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
 	newThread := models.Thread{}
-	body, _ := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+	body := ctx.Request.Body()
 	_ = newThread.UnmarshalJSON(body)
 
 	_, err = db.Exec(
@@ -161,34 +155,32 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tools.ObjectResponce(w, http.StatusOK, thread)
+	tools.ObjectResponce(ctx, http.StatusOK, thread)
 	return
 }
 
-func GetThreadPosts(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	slugOrId := vars["slug_or_id"]
+func GetThreadPosts(ctx *fasthttp.RequestCtx) {
+	slugOrId := fmt.Sprintf("%v", ctx.UserValue("slug_or_id"))
 
 	db := database.Connection
 
 	thread, err := tools.GetThreadBySlugOrID(db, slugOrId)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("Thread with slug_or_id '%s' not found", slugOrId)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
-	query := r.URL.Query()
-	limit, _ := strconv.Atoi(query.Get("limit"))
-	since, _ := strconv.Atoi(query.Get("since"))
-	sort := query.Get("sort")
-	desc, _ := strconv.ParseBool(query.Get("desc"))
+	limit := ctx.QueryArgs().GetUintOrZero("limit")
+	since := ctx.QueryArgs().GetUintOrZero("since")
+	desc, _ := strconv.ParseBool(string(ctx.QueryArgs().Peek("desc")))
+	sort := string(ctx.QueryArgs().Peek("sort"))
 
 	if limit == 0 {
 		limit = 100
 	}
 
-	sqlQuery := tools.GetQueryForThreadPosts(since, desc, sort)
+	sqlQuery := tools.GetQueryForThreadPosts(int(since), desc, sort)
 
 	rows, err := db.Query(sqlQuery, thread.ID, limit)
 	if err != nil {
@@ -204,31 +196,29 @@ func GetThreadPosts(w http.ResponseWriter, r *http.Request) {
 		posts = append(posts, post)
 	}
 
-	tools.ObjectResponce(w, http.StatusOK, posts)
+	tools.ObjectResponce(ctx, http.StatusOK, posts)
 	return
 }
 
-func VoteThread(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	slugOrId := vars["slug_or_id"]
+func VoteThread(ctx *fasthttp.RequestCtx) {
+	slugOrId := fmt.Sprintf("%v", ctx.UserValue("slug_or_id"))
 
 	db := database.Connection
 
 	thread, err := tools.GetThreadBySlugOrID(db, slugOrId)
 	if err != nil {
 		e := models.Error{Message: fmt.Sprintf("Thread with slug_or_id '%s' not found", slugOrId)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
 	vote := models.Vote{}
-	body, _ := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
+	body := ctx.Request.Body()
 	_ = vote.UnmarshalJSON(body)
 
 	if !tools.IsUserExists(db, vote.Nickname) {
 		e := models.Error{Message: fmt.Sprintf("User with nickname '%s' not found", vote.Nickname)}
-		tools.ObjectResponce(w, http.StatusNotFound, e)
+		tools.ObjectResponce(ctx, http.StatusNotFound, e)
 		return
 	}
 
@@ -250,6 +240,6 @@ func VoteThread(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	tools.ObjectResponce(w, http.StatusOK, thread)
+	tools.ObjectResponce(ctx, http.StatusOK, thread)
 	return
 }

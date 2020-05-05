@@ -2,12 +2,12 @@ package tools
 
 import (
 	"fmt"
-	"net/http"
+	"github.com/valyala/fasthttp"
 )
 
-func ObjectResponce(w http.ResponseWriter, status int, body interface{ MarshalJSON() ([]byte, error) }) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
+func ObjectResponce(ctx *fasthttp.RequestCtx, status int, body interface{ MarshalJSON() ([]byte, error) }) {
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	ctx.Response.SetStatusCode(status)
 
 	marshalBody, err := body.MarshalJSON()
 	if err != nil {
@@ -15,5 +15,5 @@ func ObjectResponce(w http.ResponseWriter, status int, body interface{ MarshalJS
 		return
 	}
 
-	_, _ = w.Write(marshalBody)
+	ctx.Response.SetBody(marshalBody)
 }
